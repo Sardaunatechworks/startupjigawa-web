@@ -570,6 +570,23 @@ export async function saveCmsInquiries(inquiries: CmsInquiry[]): Promise<void> {
 }
 
 export async function getCmsSettings(): Promise<CmsStoreData["settings"]> {
+  if (supabase) {
+    try {
+      const { data, error } = await supabase
+        .from("site_settings")
+        .select("value")
+        .eq("key", "cms_settings")
+        .single();
+      if (!error && data && data.value && typeof data.value === "object") {
+        return {
+          ...INITIAL_STORE_DATA.settings,
+          ...(data.value as unknown as CmsStoreData["settings"]),
+        };
+      }
+    } catch {
+      // Fallback
+    }
+  }
   const store = getCmsStore();
   return store.settings || INITIAL_STORE_DATA.settings;
 }
@@ -582,5 +599,22 @@ export async function saveCmsSettings(settings: Partial<CmsStoreData["settings"]
     ...settings,
   };
   saveCmsStore(store);
+
+  if (supabase) {
+    try {
+      await supabase.from("site_settings").upsert(
+        {
+          id: "cms_settings_data",
+          key: "cms_settings",
+          value: store.settings as unknown as Record<string, unknown>,
+          type: "json",
+        },
+        { onConflict: "key" }
+      );
+    } catch {
+      // Non-blocking
+    }
+  }
+
   return store.settings;
 }
