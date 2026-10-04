@@ -1,10 +1,17 @@
 import fs from "fs";
 import path from "path";
+import os from "os";
 import { TeamMember, Partner, Program, Opportunity } from "@/types";
 import { supabase } from "@/lib/supabase";
 
-const DATA_DIR = path.join(process.cwd(), "data");
-const STORE_FILE = path.join(DATA_DIR, "cms_store.json");
+const LOCAL_DATA_DIR = path.join(process.cwd(), "data");
+const LOCAL_STORE_FILE = path.join(LOCAL_DATA_DIR, "cms_store.json");
+const TMP_STORE_FILE = path.join(os.tmpdir(), "startup_jigawa_cms_store.json");
+
+declare global {
+  // eslint-disable-next-line no-var
+  var __CMS_STORE_DATA__: CmsStoreData | undefined;
+}
 
 export interface CmsInquiry {
   id: string;
@@ -302,23 +309,42 @@ const INITIAL_STORE_DATA: CmsStoreData = {
 };
 
 function ensureStoreExists(): CmsStoreData {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
+  // 1. In-memory global store
+  if (globalThis.__CMS_STORE_DATA__) {
+    return globalThis.__CMS_STORE_DATA__;
   }
 
-  if (!fs.existsSync(STORE_FILE)) {
-    fs.writeFileSync(STORE_FILE, JSON.stringify(INITIAL_STORE_DATA, null, 2), "utf-8");
-    return INITIAL_STORE_DATA;
+  // 2. Try reading from /tmp if updated in a previous warm execution on serverless/Vercel
+  if (fs.existsSync(TMP_STORE_FILE)) {
+    try {
+      const raw = fs.readFileSync(TMP_STORE_FILE, "utf-8");
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === "object") {
+        globalThis.__CMS_STORE_DATA__ = parsed;
+        return parsed;
+      }
+    } catch {
+      // Continue to next fallback
+    }
   }
 
-  try {
-    const raw = fs.readFileSync(STORE_FILE, "utf-8");
-    return JSON.parse(raw);
-  } catch (err) {
-    console.error("Error reading CMS store file, resetting to defaults:", err);
-    fs.writeFileSync(STORE_FILE, JSON.stringify(INITIAL_STORE_DATA, null, 2), "utf-8");
-    return INITIAL_STORE_DATA;
+  // 3. Try reading from bundled project file (data/cms_store.json)
+  if (fs.existsSync(LOCAL_STORE_FILE)) {
+    try {
+      const raw = fs.readFileSync(LOCAL_STORE_FILE, "utf-8");
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === "object") {
+        globalThis.__CMS_STORE_DATA__ = parsed;
+        return parsed;
+      }
+    } catch {
+      // Continue to next fallback
+    }
   }
+
+  // 4. Default fallback seed
+  globalThis.__CMS_STORE_DATA__ = INITIAL_STORE_DATA;
+  return INITIAL_STORE_DATA;
 }
 
 export function getCmsStore(): CmsStoreData {
@@ -326,23 +352,57 @@ export function getCmsStore(): CmsStoreData {
 }
 
 export function saveCmsStore(data: CmsStoreData): void {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
+  // 1. Immediate in-memory cache update
+  globalThis.__CMS_STORE_DATA__ = data;
+
+  // 2. Write to /tmp (always writable on Vercel, AWS Lambda, Linux, Windows)
+  try {
+    fs.writeFileSync(TMP_STORE_FILE, JSON.stringify(data, null, 2), "utf-8");
+  } catch (tmpErr) {
+    console.warn("Notice: /tmp store write skipped:", tmpErr);
   }
-  fs.writeFileSync(STORE_FILE, JSON.stringify(data, null, 2), "utf-8");
+
+  // 3. Try writing to local project directory (succeeds in local development; gracefully ignored on Vercel EROFS)
+  try {
+    if (!fs.existsSync(LOCAL_DATA_DIR)) {
+      fs.mkdirSync(LOCAL_DATA_DIR, { recursive: true });
+    }
+    fs.writeFileSync(LOCAL_STORE_FILE, JSON.stringify(data, null, 2), "utf-8");
+  } catch {
+    // Expected on read-only environments like Vercel
+  }
+
+  // 4. Non-blocking cloud sync to Supabase site_settings if connected
+  if (supabase) {
+    (async () => {
+      try {
+        await supabase.from("site_settings").upsert(
+          {
+            id: "cms_store_data",
+            key: "cms_store",
+            value: data as unknown as Record<string, unknown>,
+            type: "json",
+          },
+          { onConflict: "key" }
+        );
+      } catch {
+        // Non-blocking
+      }
+    })();
+  }
 }
 
 // Dedicated helpers
 export async function getCmsTeam(): Promise<TeamMember[]> {
-  // If Supabase is connected, check remote first
   if (supabase) {
     try {
       const { data, error } = await supabase
-        .from("team_members")
-        .select("*")
-        .order("display_order", { ascending: true });
-      if (!error && data && data.length > 0) {
-        return data as unknown as TeamMember[];
+        .from("site_settings")
+        .select("value")
+        .eq("key", "cms_team")
+        .single();
+      if (!error && data && Array.isArray(data.value) && data.value.length > 0) {
+        return data.value as unknown as TeamMember[];
       }
     } catch {
       // Fallback to local CMS store
@@ -358,9 +418,17 @@ export async function saveCmsTeam(team: TeamMember[]): Promise<void> {
 
   if (supabase) {
     try {
-      await supabase.from("team_members").upsert(team);
-    } catch (err) {
-      console.warn("Supabase team sync error:", err);
+      await supabase.from("site_settings").upsert(
+        {
+          id: "cms_team_data",
+          key: "cms_team",
+          value: team as unknown as Record<string, unknown>[],
+          type: "json",
+        },
+        { onConflict: "key" }
+      );
+    } catch {
+      // Non-blocking
     }
   }
 }
@@ -369,11 +437,12 @@ export async function getCmsPartners(): Promise<Partner[]> {
   if (supabase) {
     try {
       const { data, error } = await supabase
-        .from("partners")
-        .select("*")
-        .order("name", { ascending: true });
-      if (!error && data && data.length > 0) {
-        return data as unknown as Partner[];
+        .from("site_settings")
+        .select("value")
+        .eq("key", "cms_partners")
+        .single();
+      if (!error && data && Array.isArray(data.value) && data.value.length > 0) {
+        return data.value as unknown as Partner[];
       }
     } catch {
       // Fallback
@@ -389,9 +458,17 @@ export async function saveCmsPartners(partners: Partner[]): Promise<void> {
 
   if (supabase) {
     try {
-      await supabase.from("partners").upsert(partners);
-    } catch (err) {
-      console.warn("Supabase partners sync error:", err);
+      await supabase.from("site_settings").upsert(
+        {
+          id: "cms_partners_data",
+          key: "cms_partners",
+          value: partners as unknown as Record<string, unknown>[],
+          type: "json",
+        },
+        { onConflict: "key" }
+      );
+    } catch {
+      // Non-blocking
     }
   }
 }
@@ -400,11 +477,12 @@ export async function getCmsPrograms(): Promise<Program[]> {
   if (supabase) {
     try {
       const { data, error } = await supabase
-        .from("programs")
-        .select("*")
-        .order("created_at", { ascending: false });
-      if (!error && data && data.length > 0) {
-        return data as unknown as Program[];
+        .from("site_settings")
+        .select("value")
+        .eq("key", "cms_programs")
+        .single();
+      if (!error && data && Array.isArray(data.value) && data.value.length > 0) {
+        return data.value as unknown as Program[];
       }
     } catch {
       // Fallback
@@ -420,9 +498,17 @@ export async function saveCmsPrograms(programs: Program[]): Promise<void> {
 
   if (supabase) {
     try {
-      await supabase.from("programs").upsert(programs);
-    } catch (err) {
-      console.warn("Supabase programs sync error:", err);
+      await supabase.from("site_settings").upsert(
+        {
+          id: "cms_programs_data",
+          key: "cms_programs",
+          value: programs as unknown as Record<string, unknown>[],
+          type: "json",
+        },
+        { onConflict: "key" }
+      );
+    } catch {
+      // Non-blocking
     }
   }
 }
@@ -431,11 +517,12 @@ export async function getCmsOpportunities(): Promise<Opportunity[]> {
   if (supabase) {
     try {
       const { data, error } = await supabase
-        .from("opportunities")
-        .select("*")
-        .order("deadline", { ascending: true });
-      if (!error && data && data.length > 0) {
-        return data as unknown as Opportunity[];
+        .from("site_settings")
+        .select("value")
+        .eq("key", "cms_opportunities")
+        .single();
+      if (!error && data && Array.isArray(data.value) && data.value.length > 0) {
+        return data.value as unknown as Opportunity[];
       }
     } catch {
       // Fallback
@@ -451,27 +538,22 @@ export async function saveCmsOpportunities(opportunities: Opportunity[]): Promis
 
   if (supabase) {
     try {
-      await supabase.from("opportunities").upsert(opportunities);
-    } catch (err) {
-      console.warn("Supabase opportunities sync error:", err);
+      await supabase.from("site_settings").upsert(
+        {
+          id: "cms_opportunities_data",
+          key: "cms_opportunities",
+          value: opportunities as unknown as Record<string, unknown>[],
+          type: "json",
+        },
+        { onConflict: "key" }
+      );
+    } catch {
+      // Non-blocking
     }
   }
 }
 
 export async function getCmsInquiries(): Promise<CmsInquiry[]> {
-  if (supabase) {
-    try {
-      const { data, error } = await supabase
-        .from("contact_messages")
-        .select("*")
-        .order("created_at", { ascending: false });
-      if (!error && data && data.length > 0) {
-        return data as unknown as CmsInquiry[];
-      }
-    } catch {
-      // Fallback
-    }
-  }
   return getCmsStore().inquiries;
 }
 
@@ -479,14 +561,6 @@ export async function addCmsInquiry(inquiry: CmsInquiry): Promise<void> {
   const store = getCmsStore();
   store.inquiries = [inquiry, ...store.inquiries];
   saveCmsStore(store);
-
-  if (supabase) {
-    try {
-      await supabase.from("contact_messages").insert([inquiry]);
-    } catch (err) {
-      console.warn("Supabase inquiry insert error:", err);
-    }
-  }
 }
 
 export async function saveCmsInquiries(inquiries: CmsInquiry[]): Promise<void> {

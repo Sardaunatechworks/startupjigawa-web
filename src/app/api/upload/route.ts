@@ -3,6 +3,8 @@ import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 import { supabase } from "@/lib/supabase";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData();
@@ -74,20 +76,34 @@ export async function POST(req: NextRequest) {
     }
 
     // 2. Local filesystem storage in /public/uploads/<folder>
-    const uploadsDir = path.join(process.cwd(), "public", "uploads", folder);
-    await mkdir(uploadsDir, { recursive: true });
+    try {
+      const uploadsDir = path.join(process.cwd(), "public", "uploads", folder);
+      await mkdir(uploadsDir, { recursive: true });
 
-    const filePath = path.join(uploadsDir, uniqueFileName);
-    await writeFile(filePath, buffer);
+      const filePath = path.join(uploadsDir, uniqueFileName);
+      await writeFile(filePath, buffer);
 
-    const publicUrl = `/uploads/${folder}/${uniqueFileName}`;
+      const publicUrl = `/uploads/${folder}/${uniqueFileName}`;
 
-    return NextResponse.json({
-      url: publicUrl,
-      fileName: uniqueFileName,
-      size: file.size,
-      storage: "local",
-    });
+      return NextResponse.json({
+        url: publicUrl,
+        fileName: uniqueFileName,
+        size: file.size,
+        storage: "local",
+      });
+    } catch (fsErr) {
+      // Resilient fallback for serverless environments (e.g. Vercel) where /public is read-only
+      console.warn("Read-only filesystem detected, serving uploaded image via base64 data URL:", fsErr);
+      const base64 = buffer.toString("base64");
+      const dataUrl = `data:${file.type};base64,${base64}`;
+
+      return NextResponse.json({
+        url: dataUrl,
+        fileName: uniqueFileName,
+        size: file.size,
+        storage: "base64",
+      });
+    }
   } catch (error) {
     console.error("Upload error:", error);
     return NextResponse.json(

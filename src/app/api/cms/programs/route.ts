@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCmsPrograms, saveCmsPrograms } from "@/lib/cms-store";
 import { revalidatePath } from "next/cache";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   try {
     const programs = await getCmsPrograms();
