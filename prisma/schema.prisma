@@ -1,0 +1,761 @@
+// Prisma Schema for Startup Jigawa Digital Innovation Center
+// Database: Supabase PostgreSQL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ============================================================
+// AUTHENTICATION & AUTHORIZATION
+// ============================================================
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  passwordHash  String
+  name          String
+  avatar        String?
+  roleId        String
+  active        Boolean   @default(true)
+  lastLogin     DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  role          Role      @relation(fields: [roleId], references: [id])
+
+  // Relations
+  programs        Program[]        @relation("ProgramCreator")
+  posts           Post[]           @relation("PostAuthor")
+  publications    Publication[]    @relation("PublicationUploader")
+  auditLogs       AuditLog[]
+  assignedMessages ContactMessage[] @relation("AssignedTo")
+  verifiedMetrics  ImpactMetric[]  @relation("MetricVerifier")
+
+  @@map("users")
+}
+
+model Role {
+  id          String       @id @default(cuid())
+  name        String       @unique
+  description String?
+  permissions Permission[]
+  users       User[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@map("roles")
+}
+
+model Permission {
+  id       String @id @default(cuid())
+  action   String // e.g., "program.create", "program.publish", "impact.verify"
+  roles    Role[]
+
+  @@unique([action])
+  @@map("permissions")
+}
+
+// ============================================================
+// PROGRAMS & OPPORTUNITIES
+// ============================================================
+
+enum ProgramStatus {
+  DRAFT
+  UPCOMING
+  APPLICATIONS_OPEN
+  APPLICATIONS_CLOSED
+  ONGOING
+  COMPLETED
+  ARCHIVED
+}
+
+enum DeliveryMode {
+  PHYSICAL
+  VIRTUAL
+  HYBRID
+}
+
+enum ContentStatus {
+  DRAFT
+  REVIEW
+  APPROVED
+  PUBLISHED
+  ARCHIVED
+}
+
+model ProgramCategory {
+  id       String    @id @default(cuid())
+  name     String    @unique
+  slug     String    @unique
+  programs Program[]
+
+  @@map("program_categories")
+}
+
+model Program {
+  id              String         @id @default(cuid())
+  title           String
+  slug            String         @unique
+  summary         String
+  description     String         // Rich text / HTML
+  categoryId      String
+  featuredImageId String?
+  deliveryMode    DeliveryMode   @default(PHYSICAL)
+  location        String?
+  startDate       DateTime?
+  endDate         DateTime?
+  targetAudience  String?
+  eligibility     String?        // Rich text
+  prerequisites   String?
+  applicationType String?        // "internal" | "external"
+  applicationUrl  String?
+  applicationOpenDate DateTime?
+  deadline        DateTime?
+  capacity        Int?
+  status          ProgramStatus  @default(DRAFT)
+  featured        Boolean        @default(false)
+  seoTitle        String?
+  seoDescription  String?
+  ogImageId       String?
+  canonicalUrl    String?
+  publishedAt     DateTime?
+  archivedAt      DateTime?
+  createdById     String
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  category        ProgramCategory @relation(fields: [categoryId], references: [id])
+  featuredImage   Media?          @relation("ProgramFeaturedImage", fields: [featuredImageId], references: [id])
+  ogImage         Media?          @relation("ProgramOgImage", fields: [ogImageId], references: [id])
+  createdBy       User            @relation("ProgramCreator", fields: [createdById], references: [id])
+
+  // Relations
+  opportunities   Opportunity[]
+  events          Event[]        @relation("ProgramEvents")
+  impactStories   ImpactStory[]  @relation("ProgramImpactStories")
+  partners        Partner[]      @relation("ProgramPartners")
+  applications    Application[]
+  gallery         Media[]        @relation("ProgramGallery")
+
+  @@index([status])
+  @@index([categoryId])
+  @@index([featured])
+  @@index([deadline])
+  @@index([publishedAt])
+  @@map("programs")
+}
+
+enum OpportunityType {
+  BOOTCAMP
+  FELLOWSHIP
+  INTERNSHIP
+  TRAINING
+  COMPETITION
+  STARTUP_PROGRAMME
+  CALL
+  EVENT
+}
+
+model Opportunity {
+  id              String          @id @default(cuid())
+  title           String
+  slug            String          @unique
+  summary         String
+  description     String
+  type            OpportunityType
+  status          ProgramStatus   @default(DRAFT)
+  location        String?
+  deliveryMode    DeliveryMode    @default(PHYSICAL)
+  targetAudience  String?
+  eligibility     String?
+  startDate       DateTime?
+  endDate         DateTime?
+  applicationOpenDate DateTime?
+  deadline        DateTime?
+  applicationUrl  String?
+  capacity        Int?
+  featured        Boolean         @default(false)
+  featuredImageId String?
+  seoTitle        String?
+  seoDescription  String?
+  programId       String?
+  publishedAt     DateTime?
+  archivedAt      DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  program         Program?        @relation(fields: [programId], references: [id])
+  featuredImage   Media?          @relation("OpportunityFeaturedImage", fields: [featuredImageId], references: [id])
+  applications    Application[]
+
+  @@index([type])
+  @@index([status])
+  @@index([featured])
+  @@index([deadline])
+  @@index([publishedAt])
+  @@map("opportunities")
+}
+
+// ============================================================
+// APPLICATIONS & SUBMISSIONS
+// ============================================================
+
+enum ApplicationStatus {
+  SUBMITTED
+  UNDER_REVIEW
+  SHORTLISTED
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+}
+
+model Application {
+  id              String            @id @default(cuid())
+  programId       String?
+  opportunityId   String?
+  applicantName   String
+  applicantEmail  String
+  applicantPhone  String?
+  data            Json              // Flexible form data
+  attachments     String[]          // Array of storage URLs
+  status          ApplicationStatus @default(SUBMITTED)
+  notes           String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  program         Program?          @relation(fields: [programId], references: [id])
+  opportunity     Opportunity?      @relation(fields: [opportunityId], references: [id])
+
+  @@index([programId])
+  @@index([opportunityId])
+  @@index([status])
+  @@map("applications")
+}
+
+// ============================================================
+// INNOVATION LABS & PRODUCTS
+// ============================================================
+
+model Lab {
+  id          String    @id @default(cuid())
+  name        String
+  slug        String    @unique
+  description String
+  focusAreas  String[]
+  outcomes    String[]
+  order       Int       @default(0)
+  imageId     String?
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  image       Media?    @relation("LabImage", fields: [imageId], references: [id])
+  products    Product[]
+
+  @@map("labs")
+}
+
+enum ProductStatus {
+  CONCEPT
+  RESEARCH
+  PROTOTYPE
+  PILOT
+  LIVE
+  PAUSED
+  ARCHIVED
+}
+
+model Product {
+  id          String        @id @default(cuid())
+  name        String
+  slug        String        @unique
+  summary     String
+  description String
+  problem     String?       // Problem statement
+  approach    String?       // Solution approach
+  targetUsers String?
+  status      ProductStatus @default(CONCEPT) // Default is CONCEPT, never LIVE
+  featured    Boolean       @default(false)
+  website     String?
+  imageId     String?
+  labId       String?
+  publishedAt DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  image       Media?        @relation("ProductImage", fields: [imageId], references: [id])
+  lab         Lab?          @relation(fields: [labId], references: [id])
+
+  @@index([status])
+  @@index([labId])
+  @@map("products")
+}
+
+// ============================================================
+// SECTORS
+// ============================================================
+
+model Sector {
+  id            String    @id @default(cuid())
+  name          String
+  slug          String    @unique
+  description   String
+  activities    String[]
+  beneficiaries String[]
+  order         Int       @default(0)
+  imageId       String?
+  publishedAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  image         Media?    @relation("SectorImage", fields: [imageId], references: [id])
+
+  @@map("sectors")
+}
+
+// ============================================================
+// IMPACT
+// ============================================================
+
+enum VerificationStatus {
+  UNVERIFIED
+  PENDING_VERIFICATION
+  VERIFIED
+  SUPERSEDED
+  WITHDRAWN
+}
+
+enum ImpactCategory {
+  TALENT
+  TECHNOLOGY
+  CIVIC
+  RESEARCH
+  ENTREPRENEURSHIP
+  PARTNERSHIPS
+}
+
+model ImpactMetric {
+  id                   String             @id @default(cuid())
+  name                 String
+  category             ImpactCategory
+  numericValue         Float?
+  displayValue         String             // e.g., "50,000+"
+  unit                 String?            // e.g., "people", "years"
+  label                String             // e.g., "People Trained"
+  description          String?
+  reportingPeriodStart DateTime?
+  reportingPeriodEnd   DateTime?
+  sourceReference      String?
+  verificationStatus   VerificationStatus @default(UNVERIFIED)
+  verifiedById         String?
+  verifiedAt           DateTime?
+  publicVisibility     Boolean            @default(false) // Must be explicitly made public
+  displayOrder         Int                @default(0)
+  icon                 String?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  verifiedBy           User?              @relation("MetricVerifier", fields: [verifiedById], references: [id])
+
+  @@index([verificationStatus])
+  @@index([publicVisibility])
+  @@index([displayOrder])
+  @@map("impact_metrics")
+}
+
+model ImpactStory {
+  id           String   @id @default(cuid())
+  title        String
+  slug         String   @unique
+  challenge    String
+  intervention String
+  participants String?
+  solution     String
+  outcome      String
+  evidence     String?
+  featured     Boolean  @default(false)
+  imageId      String?
+  status       ContentStatus @default(DRAFT)
+  publishedAt  DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  image        Media?   @relation("ImpactStoryImage", fields: [imageId], references: [id])
+  programs     Program[] @relation("ProgramImpactStories")
+
+  @@index([status])
+  @@index([featured])
+  @@map("impact_stories")
+}
+
+// ============================================================
+// PARTNERS
+// ============================================================
+
+enum PartnerRelationshipStatus {
+  PROPOSED
+  INFORMAL_COLLABORATION
+  MOU_PENDING
+  ACTIVE_MOU
+  CONTRACT_GRANT
+  PAST_COLLABORATION
+}
+
+model PartnershipCategory {
+  id       String    @id @default(cuid())
+  name     String    @unique
+  slug     String    @unique
+  order    Int       @default(0)
+  partners Partner[]
+
+  @@map("partnership_categories")
+}
+
+model Partner {
+  id                       String                    @id @default(cuid())
+  name                     String
+  slug                     String                    @unique
+  logo                     String?                   // Storage URL
+  website                  String?
+  categoryId               String
+  description              String?
+  internalRelationshipStatus PartnerRelationshipStatus @default(PROPOSED)
+  publicRelationshipLabel  String?                   // Separately approved public text
+  startDate                DateTime?
+  endDate                  DateTime?
+  publicVisibility         Boolean                   @default(false)
+  approvalNote             String?
+  displayOrder             Int                       @default(0)
+  createdAt                DateTime                  @default(now())
+  updatedAt                DateTime                  @updatedAt
+
+  category                 PartnershipCategory       @relation(fields: [categoryId], references: [id])
+  programs                 Program[]                 @relation("ProgramPartners")
+
+  @@index([categoryId])
+  @@index([publicVisibility])
+  @@map("partners")
+}
+
+// ============================================================
+// PUBLICATIONS & RESEARCH
+// ============================================================
+
+model PublicationCategory {
+  id           String        @id @default(cuid())
+  name         String        @unique
+  slug         String        @unique
+  publications Publication[]
+
+  @@map("publication_categories")
+}
+
+model Publication {
+  id            String        @id @default(cuid())
+  title         String
+  slug          String        @unique
+  summary       String
+  author        String?
+  publishedDate DateTime?
+  categoryId    String
+  coverImageId  String?
+  fileUrl       String?       // Supabase Storage URL
+  downloadCount Int           @default(0)
+  status        ContentStatus @default(DRAFT)
+  featured      Boolean       @default(false)
+  seoTitle      String?
+  seoDescription String?
+  uploadedById  String
+  publishedAt   DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  category      PublicationCategory @relation(fields: [categoryId], references: [id])
+  coverImage    Media?              @relation("PublicationCoverImage", fields: [coverImageId], references: [id])
+  uploadedBy    User                @relation("PublicationUploader", fields: [uploadedById], references: [id])
+
+  @@index([categoryId])
+  @@index([status])
+  @@index([featured])
+  @@map("publications")
+}
+
+// ============================================================
+// NEWS & EVENTS
+// ============================================================
+
+model PostCategory {
+  id    String @id @default(cuid())
+  name  String @unique
+  slug  String @unique
+  posts Post[]
+
+  @@map("post_categories")
+}
+
+model Post {
+  id             String        @id @default(cuid())
+  title          String
+  slug           String        @unique
+  content        String        // Rich text / HTML
+  excerpt        String
+  categoryId     String
+  imageId        String?
+  authorId       String
+  status         ContentStatus @default(DRAFT)
+  featured       Boolean       @default(false)
+  seoTitle       String?
+  seoDescription String?
+  ogImageId      String?
+  scheduledAt    DateTime?
+  publishedAt    DateTime?
+  archivedAt     DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  category       PostCategory  @relation(fields: [categoryId], references: [id])
+  image          Media?        @relation("PostImage", fields: [imageId], references: [id])
+  ogImage        Media?        @relation("PostOgImage", fields: [ogImageId], references: [id])
+  author         User          @relation("PostAuthor", fields: [authorId], references: [id])
+
+  @@index([categoryId])
+  @@index([status])
+  @@index([featured])
+  @@index([publishedAt])
+  @@map("posts")
+}
+
+enum EventMode {
+  PHYSICAL
+  VIRTUAL
+  HYBRID
+}
+
+enum EventStatus {
+  DRAFT
+  UPCOMING
+  REGISTRATION_OPEN
+  REGISTRATION_CLOSED
+  ONGOING
+  COMPLETED
+  CANCELLED
+}
+
+model Event {
+  id              String      @id @default(cuid())
+  title           String
+  slug            String      @unique
+  description     String
+  type            String?     // e.g., "Conference", "Workshop", "Webinar"
+  venue           String?
+  mode            EventMode   @default(PHYSICAL)
+  startDateTime   DateTime?
+  endDateTime     DateTime?
+  registrationUrl String?
+  capacity        Int?
+  speakers        Json?       // Array of speaker objects
+  status          EventStatus @default(DRAFT)
+  featured        Boolean     @default(false)
+  imageId         String?
+  seoTitle        String?
+  seoDescription  String?
+  publishedAt     DateTime?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  image           Media?      @relation("EventImage", fields: [imageId], references: [id])
+  programs        Program[]   @relation("ProgramEvents")
+
+  @@index([status])
+  @@index([startDateTime])
+  @@index([featured])
+  @@map("events")
+}
+
+// ============================================================
+// CONTACT & NEWSLETTER
+// ============================================================
+
+enum MessageType {
+  GENERAL
+  PARTNERSHIP
+  PROGRAM
+  MEDIA
+  TECHNOLOGY
+}
+
+enum MessageStatus {
+  NEW
+  READ
+  RESPONDED
+  ARCHIVED
+}
+
+model ContactMessage {
+  id           String        @id @default(cuid())
+  type         MessageType   @default(GENERAL)
+  name         String
+  email        String
+  phone        String?
+  organization String?
+  subject      String?
+  message      String
+  status       MessageStatus @default(NEW)
+  assignedToId String?
+  notes        String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  assignedTo   User?         @relation("AssignedTo", fields: [assignedToId], references: [id])
+
+  @@index([type])
+  @@index([status])
+  @@map("contact_messages")
+}
+
+model NewsletterSubscriber {
+  id          String    @id @default(cuid())
+  email       String    @unique
+  consentGiven Boolean  @default(false)
+  confirmedAt DateTime?
+  active      Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("newsletter_subscribers")
+}
+
+// ============================================================
+// MEDIA LIBRARY
+// ============================================================
+
+model Media {
+  id         String   @id @default(cuid())
+  filename   String
+  url        String
+  altText    String?
+  caption    String?
+  source     String?
+  mimeType   String
+  size       Int      // File size in bytes
+  width      Int?
+  height     Int?
+  focalPoint Json?    // { x: number, y: number }
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Reverse relations
+  programFeaturedImages  Program[]     @relation("ProgramFeaturedImage")
+  programOgImages        Program[]     @relation("ProgramOgImage")
+  programGalleries       Program[]     @relation("ProgramGallery")
+  opportunityImages      Opportunity[] @relation("OpportunityFeaturedImage")
+  labImages              Lab[]         @relation("LabImage")
+  productImages          Product[]     @relation("ProductImage")
+  sectorImages           Sector[]      @relation("SectorImage")
+  impactStoryImages      ImpactStory[] @relation("ImpactStoryImage")
+  publicationCovers      Publication[] @relation("PublicationCoverImage")
+  postImages             Post[]        @relation("PostImage")
+  postOgImages           Post[]        @relation("PostOgImage")
+  eventImages            Event[]       @relation("EventImage")
+
+  @@map("media")
+}
+
+// ============================================================
+// SITE CONFIGURATION
+// ============================================================
+
+model SiteSetting {
+  id    String @id @default(cuid())
+  key   String @unique
+  value Json
+  type  String @default("string") // "string", "number", "boolean", "json", "image"
+
+  @@map("site_settings")
+}
+
+model NavigationItem {
+  id       String  @id @default(cuid())
+  label    String
+  href     String
+  order    Int     @default(0)
+  parentId String?
+  visible  Boolean @default(true)
+
+  parent   NavigationItem?  @relation("NavChildren", fields: [parentId], references: [id])
+  children NavigationItem[] @relation("NavChildren")
+
+  @@index([parentId])
+  @@index([order])
+  @@map("navigation_items")
+}
+
+// ============================================================
+// AUDIT LOG
+// ============================================================
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String
+  action     String   // e.g., "program.publish", "partner.approve", "user.role_change"
+  entityType String   // e.g., "Program", "Partner", "User"
+  entityId   String
+  metadata   Json?    // Additional context
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+
+  user       User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([entityType, entityId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// ============================================================
+// PAGES (Structured Static Content)
+// ============================================================
+
+model Page {
+  id             String        @id @default(cuid())
+  title          String
+  slug           String        @unique
+  content        String?
+  status         ContentStatus @default(DRAFT)
+  seoTitle       String?
+  seoDescription String?
+  publishedAt    DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  sections       PageSection[]
+
+  @@index([slug])
+  @@index([status])
+  @@map("pages")
+}
+
+model PageSection {
+  id        String   @id @default(cuid())
+  pageId    String
+  key       String   // Section identifier
+  title     String?
+  content   Json     // Flexible section content
+  order     Int      @default(0)
+  visible   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  page      Page     @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@unique([pageId, key])
+  @@index([pageId])
+  @@map("page_sections")
+}

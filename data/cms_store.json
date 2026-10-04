@@ -1,0 +1,255 @@
+{
+  "team": [
+    {
+      "id": "tm-2",
+      "name": "Ibrahim Mohammed",
+      "role": "Founder & Chief Executive Officer",
+      "initial": "I",
+      "department": "Executive Leadership",
+      "bio": "Ibrahim founded Startup Jigawa in Dutse in 2017. He guides the organisation's strategy, partnerships with government agencies and development partners, and overall operations under CAC RC 7256149.",
+      "displayOrder": 2
+    },
+    {
+      "id": "tm-3",
+      "name": "Amina Aliyu Sani",
+      "role": "Director of Programs & Digital Skills Academy",
+      "initial": "A",
+      "department": "Programs Directorate",
+      "bio": "Amina leads our Digital Skills Academy and manages student admissions. She has coordinated training delivery for major state and national initiatives, including 3MTT and the Nigeria Jubilee Fellows Programme across Jigawa.",
+      "displayOrder": 3
+    },
+    {
+      "id": "tm-4",
+      "name": "Usman Farouk",
+      "role": "Head of Technology & Product Innovation",
+      "initial": "U",
+      "department": "Technology & Engineering",
+      "bio": "Usman leads software development and technology projects at Startup Jigawa. He directs our engineering team in building practical digital tools—such as RentHouse, SoftDeliver, PrepAI, and Yankasuwa—designed for local users and low-connectivity environments.",
+      "displayOrder": 4
+    },
+    {
+      "id": "tm-5",
+      "name": "Fatima Bello Garba",
+      "role": "Lead, Civic Technology & Research Lab",
+      "initial": "F",
+      "department": "Civic Tech & Applied Research",
+      "bio": "Fatima manages our civic technology projects and field research across Jigawa's 27 Local Government Areas. She coordinates community surveys, research publications, and our ongoing collaboration with the Open Government Partnership (OGP) in Jigawa.",
+      "displayOrder": 5
+    },
+    {
+      "id": "tm-1791104835125",
+      "name": "Muhammad Auwal",
+      "role": "PM",
+      "department": "Executive Leadership",
+      "bio": "TESR",
+      "profilePic": "/uploads/team/1791104798945_WhatsApp_Image_2026-09-25_at_1.49.40_PM__1_.jpeg",
+      "initial": "M",
+      "displayOrder": 6
+    }
+  ],
+  "partners": [
+    {
+      "id": "prt-1",
+      "name": "Jigawa State Government & MDAs",
+      "slug": "jigawa-state-government",
+      "category": "State Government",
+      "publicRelationshipLabel": "Program Co-Delivery & Tech Advisory",
+      "websiteUrl": "https://jigawastate.gov.ng",
+      "publicVisibility": true,
+      "featured": true
+    },
+    {
+      "id": "prt-2",
+      "name": "NITDA (National Information Technology Development Agency)",
+      "slug": "nitda",
+      "category": "Federal Government",
+      "publicRelationshipLabel": "National Digital Economy Partner",
+      "websiteUrl": "https://nitda.gov.ng",
+      "publicVisibility": true,
+      "featured": true
+    },
+    {
+      "id": "prt-3",
+      "name": "Federal Ministry of Communications & Digital Economy",
+      "slug": "fmcide",
+      "category": "Federal Government",
+      "publicRelationshipLabel": "Skills & Innovation Alignment",
+      "websiteUrl": "https://fmcide.gov.ng",
+      "publicVisibility": true,
+      "featured": true
+    },
+    {
+      "id": "prt-4",
+      "name": "JICA (Japan International Cooperation Agency)",
+      "slug": "jica",
+      "category": "Development Partner",
+      "publicRelationshipLabel": "Development Technology Collaboration",
+      "websiteUrl": "https://www.jica.go.jp/english/",
+      "publicVisibility": true,
+      "featured": true
+    },
+    {
+      "id": "prt-5",
+      "name": "Open Government Partnership (OGP) Jigawa",
+      "slug": "ogp-jigawa",
+      "category": "Civil Society & Governance",
+      "publicRelationshipLabel": "Transparency & Civic Tech Partner",
+      "websiteUrl": "https://ogpnigeria.gov.ng",
+      "publicVisibility": true,
+      "featured": true
+    },
+    {
+      "id": "prt-6",
+      "name": "3MTT (Three Million Technical Talent)",
+      "slug": "3mtt",
+      "category": "National Initiative",
+      "publicRelationshipLabel": "In-State Delivery Partner",
+      "websiteUrl": "https://3mtt.nitda.gov.ng",
+      "publicVisibility": true,
+      "featured": true
+    },
+    {
+      "id": "prt-7",
+      "name": "Nigeria Jubilee Fellows Programme (NJFP)",
+      "slug": "njfp",
+      "category": "National Initiative",
+      "publicRelationshipLabel": "Graduate Work-Readiness Partner",
+      "websiteUrl": "https://www.njfp.ng",
+      "publicVisibility": true,
+      "featured": true
+    }
+  ],
+  "programs": [
+    {
+      "id": "prog-1",
+      "title": "Digital Skills Academy - Software Engineering Diploma",
+      "slug": "software-engineering-diploma",
+      "summary": "9-month intensive diploma covering foundational coding, modern web frameworks, database administration, and team delivery.",
+      "description": "A comprehensive curriculum tailored to real industry demand, offering mentorship from active senior engineers.",
+      "category": "Digital Skills Academy",
+      "deliveryMode": "HYBRID",
+      "location": "Dutse Digital Hub",
+      "status": "OPEN",
+      "featured": true,
+      "startDate": "2026-12-01",
+      "endDate": "2027-08-30",
+      "deadline": "2026-11-30",
+      "createdAt": "2026-10-04T08:48:17.704Z",
+      "updatedAt": "2026-10-04T08:48:17.704Z"
+    },
+    {
+      "id": "prog-2",
+      "title": "Three Million Technical Talent (3MTT) Jigawa Cohort",
+      "slug": "3mtt-jigawa-cohort",
+      "summary": "Strategic in-state training co-delivered with NITDA and FMCIDE to build practical digital skills for youth across all 27 LGAs.",
+      "description": "National initiative providing technical training in software development, cloud computing, and digital product design.",
+      "category": "National Initiative",
+      "deliveryMode": "PHYSICAL",
+      "location": "Multiple LGA Hubs across Jigawa",
+      "status": "ONGOING",
+      "featured": true,
+      "startDate": "2026-03-01",
+      "endDate": "2026-12-31",
+      "deadline": "2026-12-31",
+      "createdAt": "2026-10-04T08:48:17.704Z",
+      "updatedAt": "2026-10-04T08:48:17.704Z"
+    },
+    {
+      "id": "prog-3",
+      "title": "Civic Tech & Open Government Innovation Fellowship",
+      "slug": "civic-tech-fellowship",
+      "summary": "6-month applied fellowship pairing local researchers and technologists with state ministries to build civic transparency tools.",
+      "description": "Focused on budget tracking, citizen feedback mechanisms, and open data portals in collaboration with OGP Jigawa.",
+      "category": "Civic Technology",
+      "deliveryMode": "HYBRID",
+      "location": "Dutse & Virtual",
+      "status": "UPCOMING",
+      "featured": true,
+      "startDate": "2027-01-15",
+      "endDate": "2027-07-15",
+      "deadline": "2026-12-15",
+      "createdAt": "2026-10-04T08:48:17.704Z",
+      "updatedAt": "2026-10-04T08:48:17.704Z"
+    },
+    {
+      "id": "prog-4",
+      "title": "AgriTech & Climate Resilience Innovation Sprint",
+      "slug": "agritech-climate-sprint",
+      "summary": "Intensive 8-week acceleration sprint for innovators designing digital tools for farmers and water management across Jigawa.",
+      "description": "Supporting local developers and agri-businesses with technical prototyping, field testing, and mentorship.",
+      "category": "Innovation Lab",
+      "deliveryMode": "HYBRID",
+      "location": "Hadejia & Dutse",
+      "status": "OPEN",
+      "featured": true,
+      "startDate": "2026-12-15",
+      "endDate": "2027-02-15",
+      "deadline": "2026-12-10",
+      "createdAt": "2026-10-04T08:48:17.704Z",
+      "updatedAt": "2026-10-04T08:48:17.704Z"
+    }
+  ],
+  "opportunities": [
+    {
+      "id": "opp-1",
+      "title": "Software Engineering & Cloud Bootcamp 2026",
+      "slug": "software-engineering-bootcamp-2026",
+      "summary": "12-week intensive hands-on software development training covering full-stack web development and cloud deployment.",
+      "type": "BOOTCAMP",
+      "status": "OPEN",
+      "deadline": "2026-11-15",
+      "startDate": "2026-12-01",
+      "location": "Dutse Digital Hub, Jigawa State",
+      "applicationUrl": "https://forms.gle/startupjigawa-dev-2026",
+      "featured": true,
+      "eligibility": "Residents of Jigawa State aged 18-35 with basic computer literacy."
+    },
+    {
+      "id": "opp-2",
+      "title": "Civic Tech & Open Governance Fellowship",
+      "slug": "civic-tech-fellowship-2026",
+      "summary": "6-month paid fellowship working with local communities and civil society organisations to design budget monitoring tools.",
+      "type": "FELLOWSHIP",
+      "status": "OPEN",
+      "deadline": "2026-11-30",
+      "startDate": "2027-01-10",
+      "location": "Hybrid (Dutse + Field LGA Work)",
+      "applicationUrl": "https://forms.gle/startupjigawa-civic-fellowship",
+      "featured": true,
+      "eligibility": "Researchers, policy advocates, and software designers in Northern Nigeria."
+    },
+    {
+      "id": "opp-3",
+      "title": "Data Analysis & AI Readiness Internship",
+      "slug": "data-analysis-ai-readiness-2026",
+      "summary": "Practical 16-week placement for university graduates to build data pipelines and analytics dashboards.",
+      "type": "INTERNSHIP",
+      "status": "UPCOMING",
+      "deadline": "2026-12-15",
+      "startDate": "2027-02-01",
+      "location": "Dutse Innovation Center",
+      "applicationUrl": "https://forms.gle/startupjigawa-data-internship",
+      "featured": false,
+      "eligibility": "Recent graduates (2023-2026) with backgrounds in STEM or statistics."
+    }
+  ],
+  "inquiries": [],
+  "settings": {
+    "orgName": "Startup Jigawa (Jigawa Innovation Center)",
+    "rcNumber": "RC 7256149",
+    "email": "info@startupjigawa.com.ng",
+    "phone": "+234 803 000 0000",
+    "address": "Innovation Hub Complex, Kiyawa Road, Dutse, Jigawa State, Nigeria",
+    "operatingHours": "Monday – Friday: 8:00 AM – 5:00 PM WAT",
+    "applicationsEnabled": true,
+    "emailAlerts": true,
+    "maintenanceMode": false,
+    "hero": {
+      "title": "Building Practical Skills, Supporting Local Ideas, and Strengthening Communities in Jigawa",
+      "description": "Startup Jigawa is a technology and innovation centre in Dutse. Over the past nine years, we have trained more than 50,000 people in practical digital skills, built technology tools for local challenges, and collaborated with government and community partners across the state.",
+      "backgroundImage": "/uploads/hero/1791133540732_WhatsApp_Image_2026-08-18_at_1.25.35_PM__2_.jpeg",
+      "backgroundOpacity": 35,
+      "enableAnimation": true
+    }
+  }
+}
